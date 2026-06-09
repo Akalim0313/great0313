@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>Proactis 自動填入工具</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, 'Segoe UI', sans-serif; background: #f5f5f5; padding: 20px; color: #333; }
+h1 { font-size: 20px; margin-bottom: 6px; }
+.subtitle { color: #666; font-size: 13px; margin-bottom: 16px; }
+.section { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.section h2 { font-size: 15px; margin-bottom: 10px; color: #e65100; }
+textarea { width: 100%; height: 100px; font-family: monospace; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; padding: 8px; resize: vertical; }
+button { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+.btn-primary { background: #e65100; color: #fff; }
+.btn-primary:hover { background: #bf360c; }
+.btn-secondary { background: #eee; color: #333; }
+.btn-secondary:hover { background: #ddd; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
+th { background: #f9f9f9; white-space: nowrap; }
+td { word-break: break-all; }
+tr.active { background: #fff3e0; }
+.row-actions button { font-size: 11px; padding: 3px 8px; margin-right: 4px; }
+.status { padding: 6px 10px; border-radius: 4px; font-size: 12px; margin-top: 8px; display: none; }
+.status.ok { display: block; background: #e8f5e9; color: #2e7d32; }
+.status.err { display: block; background: #fbe9e7; color: #c62828; }
+.bookmarklet-box { background: #fff8e1; border: 1px dashed #f9a825; border-radius: 6px; padding: 12px; margin-top: 10px; }
+.bookmarklet-box code { display: block; font-size: 11px; word-break: break-all; background: #f5f5f5; padding: 8px; border-radius: 4px; max-height: 80px; overflow: auto; margin: 6px 0; }
+a.bookmarklet-link { display: inline-block; background: #e65100; color: #fff; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: bold; }
+a.bookmarklet-link:hover { background: #bf360c; }
+.help { font-size: 12px; color: #666; line-height: 1.6; }
+.help ol { padding-left: 20px; }
+.field-map { font-size: 11px; color: #888; margin-top: 6px; }
+#preview { overflow-x: auto; }
+</style>
+</head>
+<body>
+
+<h1>Proactis 自動填入工具</h1>
+<p class="subtitle">從「報帳結果」工作表複製資料，自動填入 Proactis 報帳系統</p>
+
+<!-- Step 1: Paste -->
+<div class="section">
+  <h2>① 貼上報帳結果資料</h2>
+  <p class="help" style="margin-bottom:8px;">從 Google Sheets「報帳結果」工作表複製整列資料（可多列），貼在下方：</p>
+  <textarea id="rawInput" placeholder="從報帳結果工作表複製資料貼在這裡（Tab 分隔）&#10;欄位順序：提交時間 / 志工姓名 / 活動 / 費用類別 / Item Code / 標題 / 金額 / Claim Line Comments / CO2 Value"></textarea>
+  <div style="margin-top:8px;">
+    <button class="btn-primary" onclick="parseInput()">解析資料</button>
+    <button class="btn-secondary" onclick="loadSample()">載入範例</button>
+  </div>
+  <div id="parseStatus" class="status"></div>
+</div>
+
+<!-- Step 2: Preview -->
+<div class="section" id="previewSection" style="display:none;">
+  <h2>② 確認資料</h2>
+  <div id="preview"></div>
+</div>
+
+<!-- Step 3: Use -->
+<div class="section" id="useSection" style="display:none;">
+  <h2>③ 在 Proactis 中使用</h2>
+  <div class="help">
+    <p><strong>方法 A — 書籤列拖曳安裝（推薦）</strong></p>
+    <ol>
+      <li>將下方橘色按鈕<strong>拖到書籤列</strong></li>
+      <li>在 Proactis 頁面上，先手動新增 Item Code（例如 E028）</li>
+      <li>點擊下方某一列的「複製」按鈕</li>
+      <li>點書籤列上的「填入Proactis」→ 自動填入所有欄位</li>
+    </ol>
+    <br>
+    <div id="bookmarkletContainer"></div>
+    <br>
+    <p><strong>方法 B — 直接貼上 Console</strong></p>
+    <ol>
+      <li>點擊某一列的「複製 JS」按鈕</li>
+      <li>在 Proactis 頁面按 F12 開啟開發者工具</li>
+      <li>切到 Console 分頁，貼上並按 Enter</li>
+    </ol>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// Proactis 欄位對照
+// ═══════════════════════════════════════
+
+// CO2 Unit GUID mapping (from Proactis DOM)
+const CO2_UNIT_MAP = {
+  '交通-高鐵':   'f0b66d14-e70a-4c1c-ba2e-4ec8b16760f8', // 22 - METRO/TRAIN
+  '交通-台鐵':   'f0b66d14-e70a-4c1c-ba2e-4ec8b16760f8',
+  '交通-捷運':   'f0b66d14-e70a-4c1c-ba2e-4ec8b16760f8',
+  '交通-輕軌':   'f0b66d14-e70a-4c1c-ba2e-4ec8b16760f8',
+  '交通-公車':   '681662c3-6db7-49ea-9c09-09dd5dcaa281', // 23 - BUS
+  '交通-客運':   '681662c3-6db7-49ea-9c09-09dd5dcaa281',
+  '交通-計程車': '88cdd8b7-d9c5-4c3f-8da7-372163de263a', // 21 - TAXI KM
+  '交通-渡輪':   '7065e66c-c95a-4243-b902-2f2a691234a1', // 24 - FERRY
+  '交通-其他':   '77a24fc4-494e-41f2-9253-6a41cb011b1a', // Z - UNANALYSED
+  '油錢':        'ef5562f4-4db1-4639-aa34-1dbe0c3ca92d', // 51 - PETROL LITRES
+  '影印費':      '713fceba-61db-47a8-bf1c-6c5a8819d9ed', // 71 - PRINTING KG
+  '餐費-午餐':   '77a24fc4-494e-41f2-9253-6a41cb011b1a', // Z
+  '餐費-晚餐':   '77a24fc4-494e-41f2-9253-6a41cb011b1a', // Z
+};
+const CO2_DEFAULT = '77a24fc4-494e-41f2-9253-6a41cb011b1a'; // Z - UNANALYSED
+
+// Fixed values
+const FIXED = {
+  account: '512',
+  costCentre: '300022530',
+  project: '949999',
+  fundPermit: 'Z',
+  travelReason: '7c71479c-4637-4d58-9522-a8691a4ba9fb', // Z - UNANALYSED
+  paymentType: '3660fc27-ebaf-4e85-8019-b4c5b070b8a7',  // Bank
+};
+
+// 報帳結果 columns: 0提交時間 1志工姓名 2活動 3費用類別 4ItemCode 5標題 6金額 7Comments 8CO2Value
+let parsedRows = [];
+
+function parseInput() {
+  const raw = document.getElementById('rawInput').value.trim();
+  const statusEl = document.getElementById('parseStatus');
+  if (!raw) {
+    statusEl.className = 'status err';
+    statusEl.textContent = '請先貼上資料';
+    return;
+  }
+
+  const lines = raw.split('\n').filter(l => l.trim());
+  parsedRows = [];
+
+  for (const line of lines) {
+    const cols = line.split('\t');
+    if (cols.length < 7) continue; // at least 7 columns needed
+
+    // Extract date from title (last segment after _)
+    const title = cols[5] || '';
+    let dateStr = '';
+    const segments = title.split('_');
+    const lastSeg = segments[segments.length - 1];
+    // Date format: YYYYMMDD or YYYYMMDD-YYYYMMDD
+    const dateMatch = lastSeg.match(/(\d{4})(\d{2})(\d{2})/);
+    if (dateMatch) {
+      dateStr = dateMatch[0]; // first date
+    }
+
+    parsedRows.push({
+      timestamp: cols[0] || '',
+      volunteer: cols[1] || '',
+      activity: cols[2] || '',
+      category: cols[3] || '',
+      itemCode: cols[4] || '',
+      title: title,
+      amount: cols[6] || '',
+      comments: cols[7] || '',
+      co2Value: cols[8] || '0',
+      date: dateStr,
+    });
+  }
+
+  if (parsedRows.length === 0) {
+    statusEl.className = 'status err';
+    statusEl.textContent = '無法解析任何資料列，請確認格式正確（Tab 分隔）';
+    return;
+  }
+
+  statusEl.className = 'status ok';
+  statusEl.textContent = '成功解析 ' + parsedRows.length + ' 筆費用資料';
+  renderPreview();
+  document.getElementById('previewSection').style.display = '';
+  document.getElementById('useSection').style.display = '';
+  renderBookmarklet();
+}
+
+function renderPreview() {
+  const headers = ['Proactis Line', '費用類別', 'Item Code', '標題', '金額', 'CO2 Value', '日期', '操作'];
+  let html = '<p style="font-size:12px;color:#e65100;margin-bottom:6px;">每一列會自動對應 Proactis 的 Line 編號（第 1 筆→Line 1，第 2 筆→Line 2…）</p>';
+  html += '<table><tr>' + headers.map(h => '<th>' + h + '</th>').join('') + '</tr>';
+
+  parsedRows.forEach((r, i) => {
+    const lineNum = i + 1; // Proactis line number
+    const dd = r.date.substring(6, 8) || '';
+    const mm = r.date.substring(4, 6) || '';
+    const yyyy = r.date.substring(0, 4) || '';
+    const dateDisplay = dd && mm && yyyy ? dd + '/' + mm + '/' + yyyy : r.date;
+
+    html += '<tr id="row' + i + '">' +
+      '<td style="text-align:center;font-weight:bold;font-size:14px;color:#e65100;">Line ' + lineNum + '</td>' +
+      '<td>' + esc(r.category) + '</td>' +
+      '<td>' + esc(r.itemCode) + '</td>' +
+      '<td style="max-width:250px;">' + esc(r.title) + '</td>' +
+      '<td>' + esc(r.amount) + '</td>' +
+      '<td>' + esc(r.co2Value) + '</td>' +
+      '<td>' + dateDisplay + '</td>' +
+      '<td class="row-actions">' +
+        '<button class="btn-primary" onclick="copyForProactis(' + i + ')">複製</button>' +
+        '<button class="btn-secondary" onclick="copyJS(' + i + ')">複製 JS</button>' +
+      '</td></tr>';
+  });
+  html += '</table>';
+  document.getElementById('preview').innerHTML = html;
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// Generate the fill script for a given row
+function buildFillScript(row, lineNum) {
+  const n = lineNum || 1;
+  const dd = row.date.substring(6, 8) || '';
+  const mm = row.date.substring(4, 6) || '';
+  const yyyy = row.date.substring(0, 4) || '';
+  const co2Unit = CO2_UNIT_MAP[row.category] || CO2_DEFAULT;
+
+  // Build JS that runs inside Proactis iframe
+  return `(function(){
+  var d=document.getElementById('aspFrame');
+  var doc=d?d.contentDocument:document;
+  function s(name,val){var el=doc.querySelector('[name="'+name+'"]');if(el){el.value=val;el.dispatchEvent(new Event('change',{bubbles:true}));}}
+  function sSelect(name,val){var el=doc.querySelector('select[name="'+name+'"]');if(el){el.value=val;el.dispatchEvent(new Event('change',{bubbles:true}));}}
+
+  /* Receipt Date */
+  s('ReceiptDateDay${n}','${dd}');
+  s('ReceiptDateMonth${n}','${mm}');
+  s('ReceiptDateYear${n}','${yyyy}');
+
+  /* Item Description */
+  var desc=doc.querySelector('[name="ItemDesc${n}"]');
+  if(desc){desc.value=${JSON.stringify(row.title)};desc.dispatchEvent(new Event('change',{bubbles:true}));}
+
+  /* Quantity (固定填 1) */
+  s('Quantity${n}','1');
+
+  /* Amount */
+  s('ClaimAmount${n}',${JSON.stringify(row.amount)});
+
+  /* Comments */
+  var cmt=doc.querySelector('[name="itemComments${n}"]');
+  if(cmt){cmt.value=${JSON.stringify(row.comments)};cmt.dispatchEvent(new Event('change',{bubbles:true}));}
+
+  /* Accounting: Account, CostCentre, Project */
+  s('L${n}N1E1','${FIXED.account}');
+  s('L${n}N1E2','${FIXED.costCentre}');
+  s('L${n}N1E3','${FIXED.project}');
+
+  /* CO2 Unit */
+  sSelect('L${n}Ref1','${co2Unit}');
+  /* CO2 Value */
+  s('L${n}Ref2',${JSON.stringify(row.co2Value)});
+  /* Fund Permit */
+  s('L${n}Ref3','${FIXED.fundPermit}');
+  /* Travel Reason */
+  sSelect('L${n}Ref4','${FIXED.travelReason}');
+
+  alert('✅ 已填入：'+${JSON.stringify(row.category)}+'\\n金額：'+${JSON.stringify(row.amount)}+'\\n請檢查欄位是否正確');
+})();`;
+}
+
+function copyForProactis(idx) {
+  const row = parsedRows[idx];
+  const lineNum = idx + 1; // Proactis line number matches row order
+
+  // Also copy the JS script to clipboard
+  const script = buildFillScript(row, lineNum);
+  navigator.clipboard.writeText(script).then(() => {
+    // Highlight the row
+    document.querySelectorAll('#preview tr').forEach(tr => tr.classList.remove('active'));
+    document.getElementById('row' + idx).classList.add('active');
+
+    const statusEl = document.getElementById('parseStatus');
+    statusEl.className = 'status ok';
+    statusEl.textContent = '✅ Line ' + lineNum + '（' + row.category + '）已複製！到 Proactis 按 F12 → Console 貼上';
+  });
+}
+
+function copyJS(idx) {
+  const row = parsedRows[idx];
+  const lineNum = idx + 1;
+  const script = buildFillScript(row, lineNum);
+  navigator.clipboard.writeText(script).then(() => {
+    document.querySelectorAll('#preview tr').forEach(tr => tr.classList.remove('active'));
+    document.getElementById('row' + idx).classList.add('active');
+
+    const statusEl = document.getElementById('parseStatus');
+    statusEl.className = 'status ok';
+    statusEl.textContent = '✅ Line ' + lineNum + ' JS 已複製！到 Proactis 按 F12 → Console 貼上執行';
+  });
+}
+
+function renderBookmarklet() {
+  // The bookmarklet reads from clipboard using prompt()
+  const bmCode = `javascript:void(function(){var d=document.getElementById('aspFrame');var doc=d?d.contentDocument:document;var raw=prompt('貼上填入指令（從自動填入工具複製的 JS）：');if(raw){try{eval(raw)}catch(e){alert('執行失敗：'+e.message)}}})()`;
+
+  document.getElementById('bookmarkletContainer').innerHTML =
+    '<a class="bookmarklet-link" href="' + bmCode + '" onclick="event.preventDefault();alert(\'請將此按鈕拖到書籤列！\')" title="拖到書籤列">📋 填入 Proactis</a>' +
+    '<p style="font-size:11px;color:#888;margin-top:6px;">↑ 拖曳此按鈕到書籤列</p>';
+}
+
+function loadSample() {
+  document.getElementById('rawInput').value =
+    '6/9/2026 14:42:31\t王小華\t台中海洋攤位\t交通-高鐵\tE033\t稟華:HSR_南港-桃園（來回）_20260602-20260605\t580\t王小華：台中海洋攤位高鐵來回票\t78\n' +
+    '6/9/2026 14:42:31\t王小華\t台中海洋攤位\t油錢\tE028\t稟華:PETROL_20260610\t332\t王小華：台中海洋攤位油錢\t27.8\n' +
+    '6/9/2026 14:42:31\t王小華\t台中海洋攤位\t餐費-午餐\tE039\t稟華:WORKINGLUNCH_20260604_5PPL\t1408\t小華、小張、小林、小亭、小琪：台中海洋攤位午餐\t0\n' +
+    '6/9/2026 14:42:31\t王小華\t台中海洋攤位\t影印費\tE076\t稟華:COPYING&PRINTINGCHARGE_20260602\t75\t王小華：台中海洋攤位影印費\t2.5\n' +
+    '6/9/2026 14:42:31\t王小華\t台中海洋攤位\t其他-郵寄\tE095\t稟華:POSTAGE/COURIER_台中海洋攤位_20260604\t125\t王小華：台中海洋攤位郵寄\t0';
+  parseInput();
+}
+</script>
+
+</body>
+</html>
