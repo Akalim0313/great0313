@@ -49,10 +49,41 @@ a.bm-link:hover { background: #0d47a1; }
   <h2>🔖 安裝書籤（只需做一次）</h2>
   <p class="help" style="margin-bottom:10px;">將下方藍色按鈕<strong>拖曳到書籤列</strong>即可安裝。之後在 Proactis 頁面點擊它就會跳出填入介面。</p>
   <div style="text-align:center; margin: 12px 0;">
-    <a class="bm-link" href="javascript:void(function(){var f=document.getElementById('aspFrame');var dc=f?f.contentDocument:document;var o=document.createElement('div');o.id='_pf';o.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:999999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,sans-serif';o.innerHTML='<div style=&quot;background:%23fff;border-radius:10px;padding:24px;width:520px;box-shadow:0 8px 32px rgba(0,0,0,.3)&quot;><p style=&quot;font-weight:bold;font-size:16px;margin:0 0 4px;color:%23e65100&quot;>Proactis 自動填入</p><p style=&quot;font-size:12px;color:%23888;margin:0 0 12px&quot;>從填入工具複製資料後貼在下方</p><textarea id=&quot;_pfd&quot; style=&quot;width:100%25;height:120px;font-size:11px;font-family:monospace;border:1px solid %23ccc;border-radius:4px;padding:8px;resize:vertical&quot; placeholder=&quot;貼上 JSON 資料...&quot;></textarea><div style=&quot;margin-top:12px;display:flex;justify-content:space-between;align-items:center&quot;><span id=&quot;_pfs&quot; style=&quot;font-size:12px;color:%23888&quot;></span><div><button onclick=&quot;this.closest(%27%23_pf%27).remove()&quot; style=&quot;padding:8px 14px;margin-right:6px;cursor:pointer;border:1px solid %23ccc;border-radius:4px;background:%23fff;font-size:13px&quot;>取消</button><button id=&quot;_pfg&quot; style=&quot;padding:8px 20px;background:%23e65100;color:%23fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;font-size:13px&quot;>填入全部</button></div></div></div>';document.body.appendChild(o);document.getElementById('_pfd').addEventListener('input',function(){try{var d=JSON.parse(this.value);document.getElementById('_pfs').textContent=d.length+'筆資料';document.getElementById('_pfs').style.color='%232e7d32'}catch(e){document.getElementById('_pfs').textContent='';document.getElementById('_pfs').style.color='%23c62828'}});document.getElementById('_pfg').onclick=function(){try{var rows=JSON.parse(document.getElementById('_pfd').value);function sv(nm,vl){var el=dc.querySelector('[name=&quot;'+nm+'&quot;]');if(el){el.value=vl;el.dispatchEvent(new Event('change',{bubbles:true}));el.dispatchEvent(new Event('input',{bubbles:true}))}}function ss(nm,vl){var el=dc.querySelector('select[name=&quot;'+nm+'&quot;]');if(el){el.value=vl;el.dispatchEvent(new Event('change',{bubbles:true}))}}for(var i=0;i<rows.length;i++){var r=rows[i],n=r.n;sv('ReceiptDateDay'+n,r.dd);sv('ReceiptDateMonth'+n,r.mm);sv('ReceiptDateYear'+n,r.yyyy);sv('ItemDesc'+n,r.title);sv('Quantity'+n,'1');sv('ClaimAmount'+n,r.amt);sv('itemComments'+n,r.cmt);sv('L'+n+'N1E1',r.acct);sv('L'+n+'N1E2',r.cc);sv('L'+n+'N1E3',r.proj);ss('L'+n+'Ref1',r.co2u);sv('L'+n+'Ref2',r.co2v);sv('L'+n+'Ref3',r.fp);ss('L'+n+'Ref4',r.tr)}o.remove();alert('Done! '+rows.length+' lines filled.')}catch(e){alert(e.message)}}})()" onclick="event.preventDefault();alert('請將此按鈕「拖曳」到書籤列！不是點擊。')">📋 填入 Proactis</a>
+    <a class="bm-link" id="bmLink" href="#">📋 填入 Proactis</a>
   </div>
   <p class="help" style="text-align:center;color:#999;font-size:11px;">↑ 拖曳到書籤列（不是點擊）</p>
 </div>
+<script>
+// Build bookmarklet using DOM methods (no innerHTML) to avoid quote-encoding issues
+var bmCode = [
+  'javascript:void(function(){',
+  'var f=document.getElementById("aspFrame");',
+  'var dc=f?f.contentDocument:document;',
+  'var o=document.createElement("div");o.id="_pf";',
+  'o.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:999999;display:flex;align-items:center;justify-content:center";',
+  'var bx=document.createElement("div");bx.style.cssText="background:#fff;border-radius:10px;padding:24px;width:520px;box-shadow:0 8px 32px rgba(0,0,0,.3);font-family:-apple-system,sans-serif";',
+  'var h=document.createElement("p");h.style.cssText="font-weight:bold;font-size:16px;margin:0 0 4px;color:#e65100";h.textContent="Proactis \\u81EA\\u52D5\\u586B\\u5165";',
+  'var sub=document.createElement("p");sub.style.cssText="font-size:12px;color:#888;margin:0 0 12px";sub.textContent="\\u5F9E\\u586B\\u5165\\u5DE5\\u5177\\u8907\\u88FD\\u8CC7\\u6599\\u5F8C\\u8CBC\\u5728\\u4E0B\\u65B9";',
+  'var ta=document.createElement("textarea");ta.style.cssText="width:100%;height:120px;font-size:11px;font-family:monospace;border:1px solid #ccc;border-radius:4px;padding:8px;resize:vertical";ta.placeholder="\\u8CBC\\u4E0A JSON \\u8CC7\\u6599...";',
+  'var br2=document.createElement("div");br2.style.cssText="margin-top:12px;display:flex;justify-content:flex-end;gap:8px";',
+  'var cb=document.createElement("button");cb.textContent="\\u53D6\\u6D88";cb.style.cssText="padding:8px 14px;cursor:pointer;border:1px solid #ccc;border-radius:4px;background:#fff;font-size:13px";cb.onclick=function(){o.remove()};',
+  'var gb=document.createElement("button");gb.textContent="\\u586B\\u5165\\u5168\\u90E8";gb.style.cssText="padding:8px 20px;background:#e65100;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;font-size:13px";',
+  'gb.onclick=function(){try{var rows=JSON.parse(ta.value);',
+  'function sv(nm,vl){var el=dc.querySelector("[name=\\""+nm+"\\"]");if(el){el.value=vl;el.dispatchEvent(new Event("change",{bubbles:true}));el.dispatchEvent(new Event("input",{bubbles:true}))}}',
+  'function ss(nm,vl){var el=dc.querySelector("select[name=\\""+nm+"\\"]");if(el){el.value=vl;el.dispatchEvent(new Event("change",{bubbles:true}))}}',
+  'for(var i=0;i<rows.length;i++){var r=rows[i],n=r.n;',
+  'sv("ReceiptDateDay"+n,r.dd);sv("ReceiptDateMonth"+n,r.mm);sv("ReceiptDateYear"+n,r.yyyy);',
+  'sv("ItemDesc"+n,r.title);sv("Quantity"+n,"1");sv("ClaimAmount"+n,r.amt);sv("itemComments"+n,r.cmt);',
+  'sv("L"+n+"N1E1",r.acct);sv("L"+n+"N1E2",r.cc);sv("L"+n+"N1E3",r.proj);',
+  'ss("L"+n+"Ref1",r.co2u);sv("L"+n+"Ref2",r.co2v);sv("L"+n+"Ref3",r.fp);ss("L"+n+"Ref4",r.tr)}',
+  'o.remove();alert("Done! "+rows.length+" lines filled.")}catch(e){alert(e.message)}};',
+  'br2.appendChild(cb);br2.appendChild(gb);bx.appendChild(h);bx.appendChild(sub);bx.appendChild(ta);bx.appendChild(br2);o.appendChild(bx);document.body.appendChild(o)',
+  '})()'
+].join('');
+var bmEl = document.getElementById('bmLink');
+bmEl.href = bmCode;
+bmEl.onclick = function(e) { e.preventDefault(); alert('請將此按鈕「拖曳」到書籤列！不是點擊。'); };
+</script>
 
 <!-- Step 1: Paste -->
 <div class="section">
@@ -199,10 +230,27 @@ function buildFillData() {
   });
 }
 
+function clipCopy(text, onDone) {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(onDone).catch(function() { fbCopy(text); onDone(); });
+  } else {
+    fbCopy(text); onDone();
+  }
+}
+function fbCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try { document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+}
+
 function copyAllData() {
   const data = buildFillData();
   const json = JSON.stringify(data);
-  navigator.clipboard.writeText(json).then(() => {
+  clipCopy(json, function() {
     const el = document.getElementById('copyAllStatus');
     el.className = 'status ok';
     el.textContent = '✅ 已複製 ' + data.length + ' 筆資料！到 Proactis 點書籤 →「填入 Proactis」→ 貼上 → 填入全部';
@@ -211,7 +259,7 @@ function copyAllData() {
 
 function copyItemCodes() {
   const codes = parsedRows.map((r, i) => 'Line ' + (i+1) + ': ' + r.itemCode + ' (' + r.category + ')').join('\n');
-  navigator.clipboard.writeText(codes).then(() => {
+  clipCopy(codes, function() {
     const el = document.getElementById('parseStatus');
     el.className = 'status ok';
     el.textContent = '✅ Item Code 清單已複製';
