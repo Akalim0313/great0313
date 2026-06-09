@@ -32,6 +32,11 @@ td { word-break: break-all; }
 .item-codes { background: #fff8e1; border: 1px dashed #f9a825; border-radius: 6px; padding: 12px; margin: 10px 0; font-size: 13px; }
 .item-codes code { background: #f5f5f5; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
 .copy-all-box { background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px; padding: 16px; margin-top: 12px; text-align: center; }
+.bm-install { background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+.bm-install h2 { color: #1565c0; }
+a.bm-link { display: inline-block; background: #1565c0; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: bold; cursor: grab; }
+a.bm-link:hover { background: #0d47a1; }
+.step-num { display: inline-block; background: #e65100; color: #fff; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-size: 13px; font-weight: bold; margin-right: 6px; }
 </style>
 </head>
 <body>
@@ -39,9 +44,19 @@ td { word-break: break-all; }
 <h1>Proactis 自動填入工具</h1>
 <p class="subtitle">從「報帳結果」工作表複製資料，一次填入 Proactis 所有行</p>
 
+<!-- Bookmarklet Install -->
+<div class="section bm-install">
+  <h2>🔖 安裝書籤（只需做一次）</h2>
+  <p class="help" style="margin-bottom:10px;">將下方藍色按鈕<strong>拖曳到書籤列</strong>即可安裝。之後在 Proactis 頁面點擊它就會跳出填入介面。</p>
+  <div style="text-align:center; margin: 12px 0;">
+    <a class="bm-link" href="javascript:void(function(){var f=document.getElementById('aspFrame');var dc=f?f.contentDocument:document;var o=document.createElement('div');o.id='_pf';o.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:999999;display:flex;align-items:center;justify-content:center;font-family:-apple-system,sans-serif';o.innerHTML='<div style=&quot;background:%23fff;border-radius:10px;padding:24px;width:520px;box-shadow:0 8px 32px rgba(0,0,0,.3)&quot;><p style=&quot;font-weight:bold;font-size:16px;margin:0 0 4px;color:%23e65100&quot;>Proactis 自動填入</p><p style=&quot;font-size:12px;color:%23888;margin:0 0 12px&quot;>從填入工具複製資料後貼在下方</p><textarea id=&quot;_pfd&quot; style=&quot;width:100%25;height:120px;font-size:11px;font-family:monospace;border:1px solid %23ccc;border-radius:4px;padding:8px;resize:vertical&quot; placeholder=&quot;貼上 JSON 資料...&quot;></textarea><div style=&quot;margin-top:12px;display:flex;justify-content:space-between;align-items:center&quot;><span id=&quot;_pfs&quot; style=&quot;font-size:12px;color:%23888&quot;></span><div><button onclick=&quot;this.closest(%27%23_pf%27).remove()&quot; style=&quot;padding:8px 14px;margin-right:6px;cursor:pointer;border:1px solid %23ccc;border-radius:4px;background:%23fff;font-size:13px&quot;>取消</button><button id=&quot;_pfg&quot; style=&quot;padding:8px 20px;background:%23e65100;color:%23fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;font-size:13px&quot;>填入全部</button></div></div></div>';document.body.appendChild(o);document.getElementById('_pfd').addEventListener('input',function(){try{var d=JSON.parse(this.value);document.getElementById('_pfs').textContent=d.length+'筆資料';document.getElementById('_pfs').style.color='%232e7d32'}catch(e){document.getElementById('_pfs').textContent='';document.getElementById('_pfs').style.color='%23c62828'}});document.getElementById('_pfg').onclick=function(){try{var rows=JSON.parse(document.getElementById('_pfd').value);function sv(nm,vl){var el=dc.querySelector('[name=&quot;'+nm+'&quot;]');if(el){el.value=vl;el.dispatchEvent(new Event('change',{bubbles:true}));el.dispatchEvent(new Event('input',{bubbles:true}))}}function ss(nm,vl){var el=dc.querySelector('select[name=&quot;'+nm+'&quot;]');if(el){el.value=vl;el.dispatchEvent(new Event('change',{bubbles:true}))}}for(var i=0;i<rows.length;i++){var r=rows[i],n=r.n;sv('ReceiptDateDay'+n,r.dd);sv('ReceiptDateMonth'+n,r.mm);sv('ReceiptDateYear'+n,r.yyyy);sv('ItemDesc'+n,r.title);sv('Quantity'+n,'1');sv('ClaimAmount'+n,r.amt);sv('itemComments'+n,r.cmt);sv('L'+n+'N1E1',r.acct);sv('L'+n+'N1E2',r.cc);sv('L'+n+'N1E3',r.proj);ss('L'+n+'Ref1',r.co2u);sv('L'+n+'Ref2',r.co2v);sv('L'+n+'Ref3',r.fp);ss('L'+n+'Ref4',r.tr)}o.remove();alert('Done! '+rows.length+' lines filled.')}catch(e){alert(e.message)}}})()" onclick="event.preventDefault();alert('請將此按鈕「拖曳」到書籤列！不是點擊。')">📋 填入 Proactis</a>
+  </div>
+  <p class="help" style="text-align:center;color:#999;font-size:11px;">↑ 拖曳到書籤列（不是點擊）</p>
+</div>
+
 <!-- Step 1: Paste -->
 <div class="section">
-  <h2>① 貼上報帳結果資料</h2>
+  <h2><span class="step-num">1</span> 貼上報帳結果資料</h2>
   <p class="help" style="margin-bottom:8px;">從 Google Sheets「報帳結果」工作表複製整列資料（可多列），貼在下方：</p>
   <textarea id="rawInput" placeholder="從報帳結果工作表複製資料貼在這裡（Tab 分隔，可多列）&#10;欄位順序：提交時間 / 志工姓名 / 活動 / 費用類別 / Item Code / 標題 / 金額 / Claim Line Comments / CO2 Value"></textarea>
   <div style="margin-top:8px;">
@@ -53,43 +68,34 @@ td { word-break: break-all; }
 
 <!-- Step 2: Preview -->
 <div class="section" id="previewSection" style="display:none;">
-  <h2>② 確認資料 &amp; Item Code 順序</h2>
+  <h2><span class="step-num">2</span> 確認資料 &amp; 在 Proactis 建立 Item Code</h2>
   <div class="item-codes">
-    <strong>請在 Proactis 依序新增以下 Item Code：</strong>
+    <strong>請在 Proactis 依序新增以下 Item Code（建立空白行）：</strong>
     <div id="itemCodeList" style="margin-top:6px;"></div>
     <button class="btn-secondary" style="margin-top:8px;" onclick="copyItemCodes()">複製 Item Code 清單</button>
   </div>
   <div id="preview"></div>
 </div>
 
-<!-- Step 3: Copy All -->
+<!-- Step 3: Copy & Fill -->
 <div class="section" id="useSection" style="display:none;">
-  <h2>③ 一鍵填入 Proactis</h2>
+  <h2><span class="step-num">3</span> 複製資料 → 點書籤填入</h2>
   <div class="help">
     <ol>
-      <li>在 Proactis 依上方順序新增所有 Item Code（建立空白行）</li>
-      <li>點下方「複製全部填入指令」</li>
-      <li>到 Proactis 頁面按 <strong>F12</strong> → <strong>Console</strong>，貼上後按 Enter</li>
-      <li>所有行的資料一次填入完成</li>
+      <li>在 Proactis 依上方順序新增好所有 Item Code</li>
+      <li>點下方按鈕「複製填入資料」</li>
+      <li>到 Proactis 頁面，點書籤列上的「📋 填入 Proactis」</li>
+      <li>在彈出的視窗中貼上（Ctrl+V），點「填入全部」</li>
     </ol>
   </div>
 
   <div class="copy-all-box">
-    <button class="btn-primary btn-big" onclick="copyAllJS()">📋 複製全部填入指令（一次填入所有行）</button>
+    <button class="btn-primary btn-big" onclick="copyAllData()">📋 複製填入資料</button>
     <div id="copyAllStatus" class="status" style="margin-top:8px;"></div>
   </div>
-
-  <details style="margin-top:12px;">
-    <summary style="font-size:12px;color:#888;cursor:pointer;">或逐筆複製</summary>
-    <p class="help" style="margin-top:6px;">點各列的「複製 JS」按鈕，分別貼到 Console 執行。</p>
-  </details>
 </div>
 
 <script>
-// ═══════════════════════════════════════
-// Proactis field mapping
-// ═══════════════════════════════════════
-
 const CO2_UNIT_MAP = {
   '交通-高鐵':   'f0b66d14-e70a-4c1c-ba2e-4ec8b16760f8',
   '交通-台鐵':   'f0b66d14-e70a-4c1c-ba2e-4ec8b16760f8',
@@ -106,14 +112,9 @@ const CO2_UNIT_MAP = {
   '餐費-晚餐':   '77a24fc4-494e-41f2-9253-6a41cb011b1a',
 };
 const CO2_DEFAULT = '77a24fc4-494e-41f2-9253-6a41cb011b1a';
-
 const FIXED = {
-  account: '512',
-  costCentre: '300022530',
-  project: '949999',
-  fundPermit: 'Z',
-  travelReason: '7c71479c-4637-4d58-9522-a8691a4ba9fb',
-  paymentType: '3660fc27-ebaf-4e85-8019-b4c5b070b8a7',
+  acct: '512', cc: '300022530', proj: '949999', fp: 'Z',
+  tr: '7c71479c-4637-4d58-9522-a8691a4ba9fb',
 };
 
 let parsedRows = [];
@@ -138,7 +139,6 @@ function parseInput() {
     if (dateMatch) dateStr = dateMatch[0];
 
     parsedRows.push({
-      timestamp: cols[0] || '', volunteer: cols[1] || '', activity: cols[2] || '',
       category: cols[3] || '', itemCode: cols[4] || '', title: title,
       amount: cols[6] || '', comments: cols[7] || '', co2Value: cols[8] || '0',
       date: dateStr,
@@ -147,7 +147,7 @@ function parseInput() {
 
   if (parsedRows.length === 0) {
     statusEl.className = 'status err';
-    statusEl.textContent = '無法解析任何資料列，請確認格式正確（Tab 分隔）';
+    statusEl.textContent = '無法解析，請確認格式正確（Tab 分隔）';
     return;
   }
 
@@ -159,14 +159,12 @@ function parseInput() {
 }
 
 function renderPreview() {
-  // Item Code list
   const codeList = parsedRows.map((r, i) =>
     '<span class="line-badge">Line ' + (i+1) + '</span> <code>' + esc(r.itemCode) + '</code> — ' + esc(r.category)
   ).join('<br>');
   document.getElementById('itemCodeList').innerHTML = codeList;
 
-  // Table
-  const headers = ['Line', '費用類別', 'Item Code', '標題', '金額', 'CO2', '操作'];
+  const headers = ['Line', '費用類別', 'Item Code', '標題', '金額', 'CO2'];
   let html = '<table><tr>' + headers.map(h => '<th>' + h + '</th>').join('') + '</tr>';
   parsedRows.forEach((r, i) => {
     html += '<tr>' +
@@ -175,9 +173,7 @@ function renderPreview() {
       '<td><code>' + esc(r.itemCode) + '</code></td>' +
       '<td style="max-width:220px;">' + esc(r.title) + '</td>' +
       '<td>' + esc(r.amount) + '</td>' +
-      '<td>' + esc(r.co2Value) + '</td>' +
-      '<td><button class="btn-secondary btn-sm" onclick="copySingleJS(' + i + ')">複製 JS</button></td>' +
-      '</tr>';
+      '<td>' + esc(r.co2Value) + '</td></tr>';
   });
   html += '</table>';
   document.getElementById('preview').innerHTML = html;
@@ -185,82 +181,31 @@ function renderPreview() {
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-// Build fill script for ONE line
-function buildOneLine(row, n) {
-  const dd = row.date.substring(6, 8) || '';
-  const mm = row.date.substring(4, 6) || '';
-  const yyyy = row.date.substring(0, 4) || '';
-  const co2Unit = CO2_UNIT_MAP[row.category] || CO2_DEFAULT;
-
-  return [
-    "s('ReceiptDateDay" + n + "','" + dd + "');",
-    "s('ReceiptDateMonth" + n + "','" + mm + "');",
-    "s('ReceiptDateYear" + n + "','" + yyyy + "');",
-    "t('ItemDesc" + n + "'," + JSON.stringify(row.title) + ");",
-    "s('Quantity" + n + "','1');",
-    "s('ClaimAmount" + n + "'," + JSON.stringify(row.amount) + ");",
-    "t('itemComments" + n + "'," + JSON.stringify(row.comments) + ");",
-    "s('L" + n + "N1E1','" + FIXED.account + "');",
-    "s('L" + n + "N1E2','" + FIXED.costCentre + "');",
-    "s('L" + n + "N1E3','" + FIXED.project + "');",
-    "sel('L" + n + "Ref1','" + co2Unit + "');",
-    "s('L" + n + "Ref2'," + JSON.stringify(row.co2Value) + ");",
-    "s('L" + n + "Ref3','" + FIXED.fundPermit + "');",
-    "sel('L" + n + "Ref4','" + FIXED.travelReason + "');",
-  ].join('\n  ');
-}
-
-// Build COMBINED script for ALL lines
-function buildAllScript() {
-  let lines = parsedRows.map((row, i) => {
+// Build JSON data for the bookmarklet to consume
+function buildFillData() {
+  return parsedRows.map((r, i) => {
     const n = i + 1;
-    return '  // ── Line ' + n + ': ' + row.category + ' (' + row.itemCode + ') ──\n  ' + buildOneLine(row, n);
-  }).join('\n\n');
-
-  return `(function(){
-var d=document.getElementById('aspFrame');
-var doc=d?d.contentDocument:document;
-function s(name,val){var el=doc.querySelector('[name="'+name+'"]');if(el){el.value=val;el.dispatchEvent(new Event('change',{bubbles:true}));el.dispatchEvent(new Event('input',{bubbles:true}));}}
-function t(name,val){var el=doc.querySelector('[name="'+name+'"]');if(el){el.value=val;el.dispatchEvent(new Event('change',{bubbles:true}));}}
-function sel(name,val){var el=doc.querySelector('select[name="'+name+'"]');if(el){el.value=val;el.dispatchEvent(new Event('change',{bubbles:true}));}}
-
-${lines}
-
-alert('✅ 已填入 ${parsedRows.length} 筆資料！\\n請檢查各行欄位是否正確。');
-})();`;
-}
-
-// Build single-line script
-function buildSingleScript(row, n) {
-  return `(function(){
-var d=document.getElementById('aspFrame');
-var doc=d?d.contentDocument:document;
-function s(name,val){var el=doc.querySelector('[name="'+name+'"]');if(el){el.value=val;el.dispatchEvent(new Event('change',{bubbles:true}));el.dispatchEvent(new Event('input',{bubbles:true}));}}
-function t(name,val){var el=doc.querySelector('[name="'+name+'"]');if(el){el.value=val;el.dispatchEvent(new Event('change',{bubbles:true}));}}
-function sel(name,val){var el=doc.querySelector('select[name="'+name+'"]');if(el){el.value=val;el.dispatchEvent(new Event('change',{bubbles:true}));}}
-
-  ${buildOneLine(row, n)}
-
-alert('✅ Line ${n} 已填入：${row.category}\\n金額：${row.amount}');
-})();`;
-}
-
-function copyAllJS() {
-  const script = buildAllScript();
-  navigator.clipboard.writeText(script).then(() => {
-    const el = document.getElementById('copyAllStatus');
-    el.className = 'status ok';
-    el.textContent = '✅ 已複製 ' + parsedRows.length + ' 筆填入指令！到 Proactis 按 F12 → Console 貼上執行';
+    const dd = r.date.substring(6, 8) || '';
+    const mm = r.date.substring(4, 6) || '';
+    const yyyy = r.date.substring(0, 4) || '';
+    const co2u = CO2_UNIT_MAP[r.category] || CO2_DEFAULT;
+    return {
+      n: n, dd: dd, mm: mm, yyyy: yyyy,
+      title: r.title, amt: r.amount, cmt: r.comments,
+      acct: FIXED.acct, cc: FIXED.cc, proj: FIXED.proj,
+      co2u: co2u, co2v: r.co2Value,
+      fp: FIXED.fp, tr: FIXED.tr,
+    };
   });
 }
 
-function copySingleJS(idx) {
-  const row = parsedRows[idx];
-  const script = buildSingleScript(row, idx + 1);
-  navigator.clipboard.writeText(script).then(() => {
-    const el = document.getElementById('parseStatus');
+function copyAllData() {
+  const data = buildFillData();
+  const json = JSON.stringify(data);
+  navigator.clipboard.writeText(json).then(() => {
+    const el = document.getElementById('copyAllStatus');
     el.className = 'status ok';
-    el.textContent = '✅ Line ' + (idx+1) + ' JS 已複製';
+    el.textContent = '✅ 已複製 ' + data.length + ' 筆資料！到 Proactis 點書籤 →「填入 Proactis」→ 貼上 → 填入全部';
   });
 }
 
