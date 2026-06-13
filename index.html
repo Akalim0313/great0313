@@ -72,7 +72,6 @@ var bmCode = [
   'function sv(nm,vl){var el=dc.querySelector("[name=\\""+nm+"\\"]");if(el){el.value=vl;el.dispatchEvent(new Event("change",{bubbles:true}));el.dispatchEvent(new Event("input",{bubbles:true}))}}',
   'function ss(nm,vl){var el=dc.querySelector("select[name=\\""+nm+"\\"]");if(el){el.value=vl;el.dispatchEvent(new Event("change",{bubbles:true}))}}',
   'for(var i=0;i<rows.length;i++){var r=rows[i],n=r.n;',
-  'sv("ReceiptDateDay"+n,r.dd);sv("ReceiptDateMonth"+n,r.mm);sv("ReceiptDateYear"+n,r.yyyy);',
   'sv("ItemDesc"+n,r.title);sv("Quantity"+n,"1");sv("ClaimAmount"+n,r.amt);sv("itemComments"+n,r.cmt);',
   'sv("L"+n+"N1E1",r.acct);sv("L"+n+"N1E2",r.cc);sv("L"+n+"N1E3",r.proj);',
   'ss("L"+n+"Ref1",r.co2u);sv("L"+n+"Ref2",r.co2v);sv("L"+n+"Ref3",r.fp);ss("L"+n+"Ref4",r.tr)}',
@@ -112,18 +111,17 @@ bmEl.onclick = function(e) { e.preventDefault(); alert('請將此按鈕「拖曳
 <div class="section" id="useSection" style="display:none;">
   <h2><span class="step-num">3</span> 複製資料 → 點書籤填入</h2>
   <div class="help">
+    <p style="margin-bottom:6px;">Proactis 每 10 筆換一頁，所以資料會自動分頁。請依序操作：</p>
     <ol>
       <li>在 Proactis 依上方順序新增好所有 Item Code</li>
-      <li>點下方按鈕「複製填入資料」</li>
+      <li>點下方對應頁的「複製」按鈕</li>
       <li>到 Proactis 頁面，點書籤列上的「📋 填入 Proactis」</li>
       <li>在彈出的視窗中貼上（Ctrl+V），點「填入全部」</li>
+      <li>如果有下一頁，在 Proactis 點「▶」翻到下一頁，再重複步驟 2-4</li>
     </ol>
   </div>
 
-  <div class="copy-all-box">
-    <button class="btn-primary btn-big" onclick="copyAllData()">📋 複製填入資料</button>
-    <div id="copyAllStatus" class="status" style="margin-top:8px;"></div>
-  </div>
+  <div id="pageButtons"></div>
 </div>
 
 <script>
@@ -195,9 +193,13 @@ function renderPreview() {
   ).join('<br>');
   document.getElementById('itemCodeList').innerHTML = codeList;
 
+  const totalPages = Math.ceil(parsedRows.length / PAGE_SIZE);
   const headers = ['Line', '費用類別', 'Item Code', '標題', '金額', 'CO2'];
   let html = '<table><tr>' + headers.map(h => '<th>' + h + '</th>').join('') + '</tr>';
   parsedRows.forEach((r, i) => {
+    if (totalPages > 1 && i > 0 && i % PAGE_SIZE === 0) {
+      html += '<tr><td colspan="6" style="background:#fff3e0;text-align:center;font-weight:bold;padding:6px;border-top:2px solid #e65100;color:#e65100;">── Proactis 第 ' + (Math.floor(i/PAGE_SIZE)+1) + ' 頁 ──</td></tr>';
+    }
     html += '<tr>' +
       '<td style="text-align:center;"><span class="line-badge">' + (i+1) + '</span></td>' +
       '<td>' + esc(r.category) + '</td>' +
@@ -208,20 +210,24 @@ function renderPreview() {
   });
   html += '</table>';
   document.getElementById('preview').innerHTML = html;
+
+  renderPageButtons();
 }
 
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
 // Build JSON data for the bookmarklet to consume
-function buildFillData() {
-  return parsedRows.map((r, i) => {
-    const n = i + 1;
-    const dd = r.date.substring(6, 8) || '';
-    const mm = r.date.substring(4, 6) || '';
-    const yyyy = r.date.substring(0, 4) || '';
+const PAGE_SIZE = 10; // Proactis 每頁顯示 10 筆
+
+function buildFillDataForPage(pageIndex) {
+  const start = pageIndex * PAGE_SIZE;
+  const end = Math.min(start + PAGE_SIZE, parsedRows.length);
+  const pageRows = parsedRows.slice(start, end);
+  return pageRows.map((r, i) => {
+    const n = i + 1; // 頁內 line number (1-10)，Proactis 每頁都從 1 開始
     const co2u = CO2_UNIT_MAP[r.category] || CO2_DEFAULT;
     return {
-      n: n, dd: dd, mm: mm, yyyy: yyyy,
+      n: n,
       title: r.title, amt: r.amount, cmt: r.comments,
       acct: FIXED.acct, cc: FIXED.cc, proj: FIXED.proj,
       co2u: co2u, co2v: r.co2Value,
@@ -247,13 +253,47 @@ function fbCopy(text) {
   document.body.removeChild(ta);
 }
 
-function copyAllData() {
-  const data = buildFillData();
+function renderPageButtons() {
+  const totalPages = Math.ceil(parsedRows.length / PAGE_SIZE);
+  const container = document.getElementById('pageButtons');
+  let html = '';
+
+  for (let p = 0; p < totalPages; p++) {
+    const start = p * PAGE_SIZE + 1;
+    const end = Math.min((p + 1) * PAGE_SIZE, parsedRows.length);
+    const label = totalPages === 1
+      ? '全部 ' + parsedRows.length + ' 筆'
+      : 'Proactis 第 ' + (p + 1) + ' 頁（Line ' + start + '~' + end + '）';
+
+    html += '<div class="copy-all-box" style="margin-bottom:8px;">' +
+      '<div style="font-size:13px;font-weight:bold;margin-bottom:6px;">' + label + '</div>' +
+      '<button class="btn-primary btn-big" onclick="copyPageData(' + p + ',this)">📋 複製此頁填入資料</button>' +
+      '</div>';
+  }
+
+  if (totalPages > 1) {
+    html = '<p style="font-size:12px;color:#e65100;margin-bottom:8px;">共 ' + parsedRows.length + ' 筆，分成 ' + totalPages + ' 頁。請依序操作每一頁。</p>' + html;
+  }
+
+  container.innerHTML = html;
+}
+
+function copyPageData(pageIndex, btnEl) {
+  const data = buildFillDataForPage(pageIndex);
   const json = JSON.stringify(data);
   clipCopy(json, function() {
-    const el = document.getElementById('copyAllStatus');
-    el.className = 'status ok';
-    el.textContent = '✅ 已複製 ' + data.length + ' 筆資料！到 Proactis 點書籤 →「填入 Proactis」→ 貼上 → 填入全部';
+    const totalPages = Math.ceil(parsedRows.length / PAGE_SIZE);
+    const pageLabel = totalPages === 1 ? '' : '第 ' + (pageIndex + 1) + ' 頁 ';
+    // Show status next to the button
+    let statusEl = btnEl.parentElement.querySelector('.page-status');
+    if (!statusEl) {
+      statusEl = document.createElement('div');
+      statusEl.className = 'status ok page-status';
+      statusEl.style.marginTop = '8px';
+      btnEl.parentElement.appendChild(statusEl);
+    }
+    statusEl.className = 'status ok page-status';
+    statusEl.textContent = '✅ ' + pageLabel + data.length + ' 筆已複製！到 Proactis 點書籤 → 貼上 → 填入';
   });
 }
 
